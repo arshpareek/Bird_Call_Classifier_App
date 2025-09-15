@@ -35,7 +35,7 @@ export default function Index() {
     analysisData, // Audio analysis data if enableProcessing is true
     compression, // Compression information if compression is enabled
   } = useAudioRecorder()
-  console.log(audioFile)
+  //console.log(audioFile)
   let audioSource = {
     uri: "@/components/bird.wav",
   };
@@ -191,111 +191,41 @@ export default function Index() {
 
   const readAudio = async (filePath: string) => {
     console.log(filePath);
-    //var load = require('audio-loader');
-    /* var Meyda = require('meyda');
-
-    const duration = 15;
-    const sampleRate = 41000;
-    const length = duration * sampleRate;
-    const offlineAudioContext = new OfflineAudioContext(
-        1,
-        length,
-        sampleRate
-      );
-
-    const buffer = await fetch(filePath)
-        .then((response) => response.arrayBuffer())
-        .then((arrayBuffer) =>
-          offlineAudioContext.decodeAudioData(arrayBuffer)
-        );
-
-    const audioBufferSourceNode = offlineAudioContext.createBufferSource();
-    audioBufferSourceNode.buffer = buffer;
-
-    audioBufferSourceNode.start();
-    audioBufferSourceNode.connect(offlineAudioContext.destination);
-    const result = await offlineAudioContext.startRendering();
-
-    console.log('c');
-    //const audioContext = new AudioContext({sampleRate: 41000, initSuspended: false});
-    //setTimeout(() => {}, 500)
-    //const buffer = await audioContext.decodeAudioDataSource(filePath);
-    console.log(result);
-    console.log(result.duration);
-    console.log(result.sampleRate);
-    console.log(result.numberOfChannels);
-    console.log(typeof result);
-    //let channel = buffer.getChannelData(0); */
-
-
-/* 
-    // Assuming 'audioBuffer' is an array of raw audio samples
-    const meydaAnalyzer = Meyda.createMeydaAnalyzer({
-      "audioContext": offlineAudioContext, // Create a Web Audio API context
-      "source": buffer, // Source will be the audio buffer
-      "bufferSize": 512, // Define buffer size for analysis
-      "numberOfMFCCCoefficients": 20,
-      "featureExtractors": ['rms', 'mfcc'], // Specify features to extract
-      callback: (features: any) => {
-        console.log(features); // Process the extracted features
-      }
-    });
     
-    
-    // To analyze a static buffer:
-    meydaAnalyzer.start(); // Start the analyzer
-    meydaAnalyzer.process(buffer); // Pass the audio buffer for processing
-    meydaAnalyzer.stop(); // Stop the analyzer when done */
     const audioData = await extractAudioData({
       fileUri: filePath,
-      includeWavHeader: true,
+      includeWavHeader: false,
       startTimeMs: 0,
-      endTimeMs: 1000,
+      endTimeMs: audioResult?.durationMs ?? 0,
       includeNormalizedData: true,
     });
     //console.log(audioData.pcmData);
+    //console.log(audioData.pcmData.length);
+    const melParams =  {
+      frameSize: 2048,
+      hopSize: Math.floor(audioData.normalizedData.length / (384 - 1)),
+      nMels: 128,
+      fMin: 0,
+      fMax: 16000,
+      windowType: 'hann',
+      normalize: true,
+      logScale: false,
+    };
     await Essentia.setAudioData(audioData.normalizedData, 44100);
     const mfccResult = await Essentia.extractMFCC();
-    const melSpectrogram = await Essentia.computeMelSpectrogram();
+    const melSpectrogram = await Essentia.computeMelSpectrogram(melParams);
     //let mfccData =  Meyda.prepareSignalWithSpectrum(buffer, "hanning", 512)
-    console.log(mfccResult.mfcc.length);
-    console.log(melSpectrogram.data.bands);
-    //console.log(mfccResult);
-
-    /*const buffer = await load(filePath).then(function (buffer: AudioBuffer) {
-      console.log('c');
-      const channelData = buffer.getChannelData(0) 
-      const PaddingLength = (Math.pow(2,Math.round(Math.log2(channelData.length)+1)) - channelData.length)
-      let halfPaddingLength = Math.floor(PaddingLength/2)
-      const pad1 = new Array(halfPaddingLength).fill(0);
-      const pad2 = new Array(PaddingLength - halfPaddingLength).fill(0);
-      let finalBbuffer = [...pad1,...channelData,...pad2]
-      console.log(finalBbuffer.length)
-   
-      let mfccData =  Meyda.extract('mfcc', finalBbuffer)
-      console.log("mfccData : ",mfccData);
-   
-     });*/
-    //const channelData = buffer.getChannelData(0)  
-    //let mfccData =  Meyda.extract('mfcc', buffer)
+    //console.log(mfccResult.mfcc.length);
     
-    console.log('c');
-    //console.log(channelData);
-    /*console.log(filePath);
-    const audio = await FileSystem.readAsStringAsync(filePath, {'encoding': 'base64'})
+    
+    let melSpec = melSpectrogram.data.bands;
+    melSpec.map(row => {row.map(number => {10 * Math.log10(number)})});
+    //console.log(melSpec);
+    console.log(melSpec.length);
+    console.log(melSpec[0].length);
 
-    console.log(audio);
-    let wav = new WaveFile();
-    console.log(typeof filePath);
-    wav.fromBase64(audio);
     console.log('c');
-    wav.toSampleRate(22050);
-    console.log('d');
-    const samples = wav.getSamples();
-    console.log(samples.length);
-    console.log(typeof samples);
-    console.log(samples.slice(1000, 1010))
-    return samples;*/
+    return melSpec;
   }
 
   useEffect(() => {
