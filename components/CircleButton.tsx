@@ -30,7 +30,7 @@ export default function CircleButton({ icon, onPress, recorderState}: Props) {
         <View style={styles.circleButtonContainer}>
             <Pressable onPress={onPress}>
                 <Animated.View style={[styles.circleButton, animatedStyle]}>
-                    <MaterialIcons name={icon} size={24} color="indigo" />
+                    <MaterialIcons name={icon} size={30} color="indigo" />
                 </Animated.View>
             </Pressable>
         </View>
@@ -39,17 +39,17 @@ export default function CircleButton({ icon, onPress, recorderState}: Props) {
 
 const styles = StyleSheet.create({
     circleButtonContainer: {
-        width: 84,
-        height: 84,
+        width: 114,
+        height: 114,
         marginHorizontal: 20,
         borderWidth: 4,
-        borderRadius: 42,
+        borderRadius: 49,
         borderColor: '#9b31ff',
         padding: 3,
     },
     circleButton: {
-        width: 70,
-        height: 70,
+        width: 100,
+        height: 100,
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: 42,

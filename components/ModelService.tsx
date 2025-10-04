@@ -19,16 +19,28 @@ export interface IModelPredictionResponse {
   error?:string | null
 }
 
-const decodePredictions = (predictions:tf.Tensor, classes:any,topK=1) =>{
-  const {values, indices} = predictions.topk(topK);
-  const topKValues = values.dataSync();
-  const topKIndices = indices.dataSync();
+const topKElements = (arr: Uint8Array, k: number) => {
+  let temp_array = Array.from(arr);
+  let indexed_array = temp_array.map((value, index) => ({value, index}));
+  indexed_array.sort((a, b) => {return b.value - a.value});
+  return indexed_array.slice(0, k);
+}
 
+
+const decodePredictions = (predictions: Uint8Array, classes: Record<number, string>, topK=1) =>{
+  //console.log(predictions);
+  const topPredictions = topKElements(predictions, 1);
+  
+  const topKValues: number[] = topPredictions.map(pair => pair.value);
+  const topKIndices = topPredictions.map(pair => pair.index);
+  console.log(topPredictions);
+  console.log(topKValues);
+  console.log(topKIndices);
   const topClassesAndProbs:ModelPrediction[] = [];
   for (let i = 0; i < topKIndices.length; ++i) {
     topClassesAndProbs.push({
       className: classes[topKIndices[i]],
-      probability: topKValues[i]
+      probability: topKValues[i],
     } as ModelPrediction);
   }
   return topClassesAndProbs;
@@ -45,17 +57,14 @@ export class ModelService {
     }
 
     static async createModel(melSize:number[]) {
+        console.log('1');
         if (!ModelService.instance){
-            //await tf.ready(); 
-            
-            const modelPath = {url: '../assets/models/model.tflite'};
-            //console.log(((modelJSON['format'])));
-            const model = await loadTensorflowModel(modelPath);
-            //const model = await tf.loadGraphModel(modelJSON);
-            
-            ModelService.instance = new ModelService(melSize, model);
-          }
-    
+              
+              const modelPath = {url: '../assets/models/model.tflite'};
+              const model = await loadTensorflowModel(require('../assets/models/model.tflite'));
+              ModelService.instance = new ModelService(melSize, model);
+            }
+        
         return ModelService.instance;
     }
 
@@ -64,14 +73,17 @@ export class ModelService {
     async classify(audio: number[][]): Promise<IModelPredictionResponse> {
         const classificationResponse = {timing:null, predictions:null, error:null} as IModelPredictionResponse;
         try {
-            let input_tensor = tf.tensor(audio);
-            console.log(input_tensor.shape);
-            //TODO: normalize
+            let input = [];
+            audio = audio.map(row => {while (row.length < 384) {row.push(0)} return row;})
+            let input_array = new Float32Array(audio.flat());
+            //TODO: further normalize
+            console.log(this.model.inputs);
+            
+            const predictionsTensor: Uint8Array[] = await this.model.run([input_array]) as Uint8Array[];
+            
+            const class_names: Record<number, string> = require('../assets/class_names.json')
 
-            const predictionsTensor: Uint8Array[] = await this.model.run(input_tensor) as Uint8Array[];
-            const class_names: any = JSON.parse('../assets/class_names.json')
-
-            classificationResponse.predictions = decodePredictions(predictionsTensor, class_names)
+            classificationResponse.predictions = decodePredictions(predictionsTensor[0], class_names)
             console.log(classificationResponse.predictions[0].className)
             return classificationResponse
         } catch (error) {
@@ -80,8 +92,3 @@ export class ModelService {
         }
     }
 }
-
-/*export function predict(input: number[][]) {
-    
-}*/
-
